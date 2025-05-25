@@ -1,0 +1,268 @@
+{
+    "name": "Edtech podcast generator",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          -60,
+          0
+        ],
+        "id": "655c516e-40f9-4eec-abff-2fea8519808b",
+        "name": "When clicking ‘Test workflow’"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {}
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -60,
+          220
+        ],
+        "id": "6de7e865-4654-4b25-a60e-aa3438f495ff",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "model": "perplexity/sonar",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+        "typeVersion": 1,
+        "position": [
+          200,
+          180
+        ],
+        "id": "a68da804-245b-4480-a97e-0c27d5557bf4",
+        "name": "perplexity",
+        "credentials": {
+          "openRouterApi": {
+            "id": "4FODqU5RFSAYyKqi",
+            "name": "OpenRouter account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "日本のedtechに関する昨日今日の最新のニュースを調べて、1000文字くらいでまとめてください。\n\n注意点\n・出力は原稿の内容のみにしてください。\n・出力する際は改行をしないでください。",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 1.9,
+        "position": [
+          200,
+          0
+        ],
+        "id": "ddff4ad3-37cc-4915-ab94-bae45223a7ea",
+        "name": "今日のニュース取得"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=以下の文章から、そのままpodcastの原稿にできるように改修して。\n\n#対象の文章\n{{ $json.output }}\n\n#注意点\n・出力は原稿の内容のみ\n・原稿は「20xx年x月x日のEdTechニュースです」から始める。(例：2025年5月11日)\n・出力には改行を含めない",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 1.9,
+        "position": [
+          560,
+          0
+        ],
+        "id": "696e91b3-fb46-4e9b-9319-be03e802b8b2",
+        "name": "ニュース文章をpodcast文に"
+      },
+      {
+        "parameters": {
+          "model": "openai/gpt-4.1",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+        "typeVersion": 1,
+        "position": [
+          540,
+          180
+        ],
+        "id": "dbfb87dc-12a7-4b6c-b573-9e38c856d2a9",
+        "name": "GPT4.1",
+        "credentials": {
+          "openRouterApi": {
+            "id": "4FODqU5RFSAYyKqi",
+            "name": "OpenRouter account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyAk5gZR2fjYUrqhryQRPXUIMMV1vuzmhck",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n    \"input\": {\n        \"text\": \"{{ $json.output }}\"\n    },\n    \"voice\": {\n        \"languageCode\": \"ja-JP\",\n        \"name\": \"ja-JP-Wavenet-A\"\n    },\n    \"audioConfig\": {\n        \"audioEncoding\": \"MP3\"\n    }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          940,
+          0
+        ],
+        "id": "a233f642-fdb1-4085-849e-4eb652eca011",
+        "name": "google APIで音声base64取得"
+      },
+      {
+        "parameters": {
+          "operation": "toBinary",
+          "sourceProperty": "=audioContent",
+          "options": {
+            "fileName": "EdTech.mp3"
+          }
+        },
+        "type": "n8n-nodes-base.convertToFile",
+        "typeVersion": 1.1,
+        "position": [
+          1160,
+          0
+        ],
+        "id": "94ba7880-8ea2-4289-b994-2e2531f2de93",
+        "name": "base64を音声ファイルに"
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "file",
+          "options": {
+            "channelId": "C08RT7BS119",
+            "title": "="
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1360,
+          0
+        ],
+        "id": "bde120b0-6b44-4a93-a7e8-144309932f73",
+        "name": "Slack投稿",
+        "webhookId": "653ea222-77e6-4b42-bca4-7a91f811ae4b",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "y5uH6UJyjPJNIOb4",
+            "name": "Slack account"
+          }
+        }
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "When clicking ‘Test workflow’": {
+        "main": [
+          [
+            {
+              "node": "今日のニュース取得",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "perplexity": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "今日のニュース取得",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "今日のニュース取得": {
+        "main": [
+          [
+            {
+              "node": "ニュース文章をpodcast文に",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "ニュース文章をpodcast文に": {
+        "main": [
+          [
+            {
+              "node": "google APIで音声base64取得",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT4.1": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "ニュース文章をpodcast文に",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "google APIで音声base64取得": {
+        "main": [
+          [
+            {
+              "node": "base64を音声ファイルに",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "base64を音声ファイルに": {
+        "main": [
+          [
+            {
+              "node": "Slack投稿",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Slack投稿": {
+        "main": [
+          []
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "versionId": "44d18aa0-ef4e-481f-a0dc-500ed3bb8ca8",
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "152d7e151220173e6638b668571c0a956a0a2c976e11617731ff57d3559bce2d"
+    },
+    "id": "9Ph0wpLYjSd61YSr",
+    "tags": []
+  }
